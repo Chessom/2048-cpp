@@ -29,7 +29,7 @@ private:
 
     void add_random_tile();
     void slide_and_merge_row(std::vector<int>& row);
-    void rotate_board();
+    void rotate_board_r();
 };
 
 void board_2048::add_random_tile()
@@ -70,7 +70,7 @@ void board_2048::slide_and_merge_row(std::vector<int>& row)
     row = std::move(final_row);
 }
 
-void board_2048::rotate_board()
+void board_2048::rotate_board_r()
 {
     std::vector<int> new_brd(brd_size * brd_size);
     for (int i = 0; i < brd_size; ++i) {
@@ -85,7 +85,7 @@ void board_2048::move(int dir)
 {
     // Rotate the board to simplify the move logic
     for (int i = 0; i < dir; ++i) {
-        rotate_board();
+        rotate_board_r();
     }
 
     // Move left
@@ -97,7 +97,7 @@ void board_2048::move(int dir)
 
     // Rotate the board back to the original orientation
     for (int i = 0; i < (4 - dir) % 4; ++i) {
-        rotate_board();
+        rotate_board_r();
     }
 
     // Add a new random tile
