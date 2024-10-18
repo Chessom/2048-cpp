@@ -7,7 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include_directories(include ftxui)
+include_directories(include)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/third-party/ftxui/include
+)
 
 aux_source_directory(src DIR_SRCS)
 
