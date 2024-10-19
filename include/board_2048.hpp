@@ -50,7 +50,7 @@ public:
         }
     }
 
-    uint64_t scroe() const { return score;}
+    uint64_t get_score() const { return score;}
 private:
     std::default_random_engine gen;
     int brd_size = 4;
@@ -85,7 +85,7 @@ private:
 
     void rotate_board_180();
 
-    void rotate_to_left(int);
+    void rotate_to_left_from(int);
 
     void rotate_from_left_to(int);
 };
@@ -222,7 +222,7 @@ void board_2048::rotate_board_180() {
     brd = std::move(new_brd);
 }
 
-inline void board_2048::rotate_to_left(int dir)
+inline void board_2048::rotate_to_left_from(int dir)
 {
     // Rotate the board to simplify the move logic
     switch (dir)
@@ -266,7 +266,7 @@ inline void board_2048::rotate_from_left_to(int dir)
 
 void board_2048::move(int dir)
 {
-    rotate_to_left(dir);
+    rotate_to_left_from(dir);
 
     // Move left
     for (int i = 0; i < brd_size; ++i) {
@@ -281,7 +281,7 @@ inline void board_2048::move_record(int dir)
     records.clear();
     records.resize(brd_size * brd_size);
 
-    rotate_to_left(dir);
+    rotate_to_left_from(dir);
 
     for (int i = 0; i < brd_size; ++i) {
         init_row_record(brd.begin() + i * brd_size, brd.begin() + (i + 1) * brd_size, i);
@@ -297,7 +297,7 @@ inline bool board_2048::valid_move(int dir)
 {
     std::vector<int> original_brd = brd;
 
-    rotate_to_left(dir);
+    rotate_to_left_from(dir);
 
     // Move left
     for (int i = 0; i < brd_size; ++i) {

@@ -269,36 +269,46 @@ namespace tui {
 	};
 	class BoardBase :public ftxui::ComponentBase {
 	public:
-		explicit BoardBase(const BoardOption& options) 
-			:option(options), board(options.board_size) {
+		explicit BoardBase(core::board_2048& board_ref, const BoardOption& options)
+			:option(options),board(board_ref){
+			board.brd_size = option.board_size;
 			pre_board = board;
 			animate_value_and_target.resize(options.board_size);
 		};
 
 		void OnAnimation(ftxui::animation::Params& params) override {
-			animator_main.OnAnimation(params);
+			if (animator_main.to() != 0.0f) {
+				animator_main.OnAnimation(params);
+			}
 		}
 
 		bool OnEvent(ftxui::Event e) override {
 			using namespace ftxui;
+			if (e.is_mouse() && e.mouse().motion == Mouse::Pressed) {
+				if (box_.Contain(e.mouse().x, e.mouse().y)) {
+					TakeFocus();
+				}
+			}
 			int dir = -1;
-			if (e == Event::ArrowUp) {
+			if (e == Event::ArrowUp || e == Event::W) {
 				dir = core::direction::up;
 			}
-			else if (e == Event::ArrowDown)
+			else if (e == Event::ArrowDown || e == Event::S)
 			{
 				dir = core::direction::down;
 			}
-			else if (e == Event::ArrowLeft)
+			else if (e == Event::ArrowLeft || e == Event::A)
 			{
 				dir = core::direction::left;
 			}
-			else if (e == Event::ArrowRight)
+			else if (e == Event::ArrowRight || e == Event::D)
 			{
 				dir = core::direction::right;
 			}
 			else if (e == Event::Special("reset_board")) {
 				board = core::board_2048(option.board_size);
+				animate_value_and_target.clear();
+				animate_value_and_target.resize(option.board_size);
 				return true;
 			}
 
@@ -308,13 +318,13 @@ namespace tui {
 					pre_board = board;
 					board.move_record(dir);
 					animate_direction = dir;
-					UpdateAnimationTargetV2(animate_direction);
-					board.add_random_tile(); 
-					return true;
+					UpdateAnimationTarget(animate_direction);
+					board.add_random_tile();
+					if (board.is_over()) {
+						ScreenInteractive::Active()->PostEvent(Event::Special("gameover"));
+					}
 				}
-				else {
-					return false;
-				}
+				return true;
 			}
 			else {
 				return false;
@@ -372,74 +382,13 @@ namespace tui {
 			}
 			int col_size = (option.cell_size + option.sep_size) * option.board_size - option.sep_size;
 			return ret
-				| size(WIDTH, EQUAL, col_size * 2)
-				| size(HEIGHT, EQUAL, col_size);
+				| size(WIDTH, EQUAL, col_size * 2 + 2)
+				| size(HEIGHT, EQUAL, col_size + 2)|reflect(box_);
 		}
 
 		int op_dir(int dir)const { return (dir + 2) & 0b11; }
 
 		void UpdateAnimationTarget(int dir) {
-			animator_main = ftxui::animation::Animator(&animation_progress, 1, option.duration, option.move_func);
-			using namespace ftxui;
-			auto brd_sz = board.size();
-			for (int x = 0; x < brd_sz; ++x) {
-				animate_value_and_target[x].clear();
-				for (int y = 0; y < brd_sz; ++y) {
-					if (dir == core::direction::left) {
-						int ay = brd_sz - y - 1;
-						if (pre_board.get_tile(x, ay) != 0) {
-							if (board.get_tile(x, ay) == 0) {
-								int tar = ay - 1;
-								while (tar >= 0 && !board.get_tile(x, tar)) --tar;
-								animate_value_and_target[x].push_back({ pre_board.get_tile(x, ay), ay,tar });
-							}
-							else {
-								animate_value_and_target[x].push_back({ pre_board.get_tile(x, ay),ay,ay });
-							}
-						}
-					}
-					else if (dir == core::direction::right) {
-						if (pre_board.get_tile(x, y) != 0) {
-							if (board.get_tile(x, y) == 0) {
-								int tar = y + 1;
-								while (tar < brd_sz && !board.get_tile(x, tar)) ++tar;
-								animate_value_and_target[x].push_back({ pre_board.get_tile(x, y),y,tar });
-							}
-							else {
-								animate_value_and_target[x].push_back({ pre_board.get_tile(x, y),y,y });
-							}
-						}
-					}
-					else if (dir == core::direction::down) {
-						if (pre_board.get_tile(y, x) != 0) {
-							if (board.get_tile(y, x) == 0) {
-								int tar = y + 1;
-								while (tar < brd_sz && !board.get_tile(tar, x)) ++tar;
-								animate_value_and_target[x].push_back({ pre_board.get_tile(y, x),y,tar });
-							}
-							else {
-								animate_value_and_target[x].push_back({ pre_board.get_tile(y, x),y,y });
-							}
-						}
-					}
-					else if (dir == core::direction::up) {
-						int ay = brd_sz - y - 1;
-						if (pre_board.get_tile(ay, x) != 0) {
-							if (board.get_tile(ay, x) == 0) {
-								int tar = ay - 1;
-								while (tar >= 0 && !board.get_tile(tar, x)) --tar;
-								animate_value_and_target[x].push_back({ pre_board.get_tile(ay, x),ay,tar });
-							}
-							else {
-								animate_value_and_target[x].push_back({ pre_board.get_tile(ay, x),ay,ay });
-							}
-						}
-					}
-				}
-			}
-		}
-
-		void UpdateAnimationTargetV2(int dir) {
 			animator_main = ftxui::animation::Animator(&animation_progress, 1, option.duration, option.move_func);
 			using namespace ftxui;
 			
@@ -472,19 +421,18 @@ namespace tui {
 				}
 			}
 		}
-	private:
 		BoardOption option;
-		core::board_2048 board, pre_board;
+	private:
+		ftxui::Box box_;
+		core::board_2048& board;
+		core::board_2048 pre_board;
 		int animate_direction = core::direction::left;
 		float animation_progress = 1.0f;
 		ftxui::animation::Animator animator_main = ftxui::animation::Animator(&animation_progress);
 		std::vector<std::vector<std::tuple<int, float, float>>> animate_value_and_target;
 	};
-	inline ftxui::Component Board(BoardOption option) {
-		return ftxui::Make<BoardBase>(option);
-	}
-	inline ftxui::Component Board(int board_size, BoardOption option) {
-		option.board_size = board_size;
-		return ftxui::Make<BoardBase>(option);
+	using BoardCom = std::shared_ptr<BoardBase>;
+	inline auto Board(core::board_2048& brd_ref, BoardOption option = BoardOption{}) {
+		return ftxui::Make<BoardBase>(brd_ref, option);
 	}
 }
