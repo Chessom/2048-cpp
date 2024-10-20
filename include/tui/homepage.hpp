@@ -4,6 +4,20 @@
 #include"board_ftxui.h"
 namespace tui {
 	struct HomePage {
+		HomePage() {
+			using namespace ftxui;
+			reset_handler= [this] {
+				try {
+					brd->option.board_size = std::stoi(board_size);
+					brd->option.cell_size = std::max(1, std::stoi(cell_size));
+				}
+				catch (const std::exception&) {}
+				brd->OnEvent(Event::Special("reset_board"));
+				show_modal = false;
+				score = 0;
+				brd->TakeFocus();
+				};
+		}
 		void start() {
 			using namespace ftxui;
 			ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
@@ -26,17 +40,28 @@ namespace tui {
 								ResetButton(),
 							}) | hcenter,
 							Ele(separatorEmpty()),
-							BoardSizeInput(),
+							Container::Horizontal({
+								BoardSizeInput() | borderEmpty | bgcolor(colors::zero_col) | color(colors::num_col),
+								Ele(separatorEmpty()),
+								CellSizeInput() | borderEmpty | bgcolor(colors::zero_col) | color(colors::num_col),
+							}) | hcenter,
 							AnimationDurationAdjust(),
 							Ele(separatorEmpty()),
 							AnimationEasingAdjust(),
 							Ele(separatorEmpty()),
-							Button("Quit",screen.ExitLoopClosure(),
-								ButtonOption::Animated(
+							AutomaticMove() | vcenter,
+							Ele(separatorEmpty()),
+							Container::Horizontal(
+							{
+								SearchDepth() | vcenter,
+								Renderer([] {return separatorEmpty(); }),
+								Text("Negative: automatic") | borderEmpty | vcenter
+							}),
+							Ele(separatorEmpty()),
+							Button("      Quit      ",screen.ExitLoopClosure(),ButtonOption::Animated(
 									colors::zero_col,colors::num_col,
-									Color::Red,colors::num_col
-								)
-							)
+									Color::Red,colors::num_col)
+							) | hcenter
 						}),
 				}
 			) 
@@ -75,14 +100,7 @@ namespace tui {
 
 		ftxui::Component ResetButton() {
 			using namespace ftxui;
-			return Button("Reset", [this] {
-				if (!board_size.empty()) {
-					brd->option.board_size = std::stoi(board_size);
-				}
-				brd->OnEvent(Event::Special("reset_board"));
-				show_modal = false;
-				score = 0;
-				}, ButtonOption::Animated(0xeee4da_rgb, 0x776e65_rgb));
+			return Button("Reset", reset_handler, ButtonOption::Animated(0xeee4da_rgb, 0x776e65_rgb));
 		}
 
 		ftxui::Component ScoreRecord(std::string title) {
@@ -119,13 +137,59 @@ namespace tui {
 
 		ftxui::Component BoardSizeInput() {
 			using namespace ftxui;
-			auto option = InputOption::Spacious();
-			Component input = Input(&board_size, "Input BoardSize", option);
+			auto option = InputOption::Default();
+			option.on_enter = reset_handler;
+			option.multiline = false;
+			Component input = Input(&board_size, "Input Board Size", option)
+				| size(WIDTH, GREATER_THAN, 4);
 			// Filter out non-digit characters.
 			input |= CatchEvent([&](Event event) {
 				return event.is_character() && !std::isdigit(event.character()[0]);
 				});
-			return Container::Horizontal({ Text("Board size:") | vcenter,input | vcenter });
+			return Container::Horizontal({ Text("Board size:  ") | vcenter,input | vcenter});
+		}
+
+		ftxui::Component CellSizeInput() {
+			using namespace ftxui;
+			auto option = InputOption::Default();
+			option.on_enter = [this] {
+				try {
+					brd->option.cell_size = std::max(1, std::stoi(cell_size));
+				}
+				catch (const std::exception&) {}
+				brd->TakeFocus();
+				};;
+			option.multiline = false;
+			Component input = Input(&cell_size, "Input Cell Size", option)
+				| size(WIDTH, GREATER_THAN, 4);
+			// Filter out non-digit characters.
+			input |= CatchEvent([&](Event event) {
+				return event.is_character() && !std::isdigit(event.character()[0]);
+				});
+			return Container::Horizontal({ Text("Cell size:  ") | vcenter,input | vcenter });
+		}
+
+		ftxui::Component SearchDepth() {
+			using namespace ftxui;
+			Color bgc = 0xeee4da_rgb, fgc = 0x776e65_rgb;
+			auto option = InputOption::Spacious();
+			option.on_change = [this] {
+				int depth = -3;
+				try {
+					depth = std::stoi(search_depth);
+					brd->solver.set_depth(depth);
+				}
+				catch (const std::exception&) {
+					brd->solver.set_depth(-3);
+				}
+			};
+			option.multiline = false;
+			Component input = Input(&search_depth, "Depth", option)
+				| size(WIDTH, GREATER_THAN, 4);
+			input |= CatchEvent([&](Event event) {
+				return event.is_character() && event.character()[0] != '-' && !std::isdigit(event.character()[0]);
+				});
+			return Container::Horizontal({ Text("Search Depth:") | vcenter,input | vcenter })/* | bgcolor(0xeee4da_rgb) | color(0x776e65_rgb)*/;
 		}
 
 		ftxui::Component AnimationDurationAdjust() {
@@ -140,6 +204,7 @@ namespace tui {
 				}
 				brd->option.duration = std::chrono::milliseconds(duration_ms);
 			};
+			option.multiline = false;
 			Component input = Input(&animation_duration, "duration(ms)", option);
 			// Filter out non-digit characters.
 			input |= CatchEvent([&](Event event) {
@@ -196,27 +261,51 @@ namespace tui {
 				BackInOut,
 				BounceInOut
 			};
-			Component drop = Dropdown(&easing_name, &selected_easing);
-			Component confirm = Button("Confirm Animation Style", [this] {brd->option.move_func = easing_func[selected_easing]; }, ButtonOption::Animated(0xeee4da_rgb, 0x776e65_rgb));
+			Component drop = Dropdown(&easing_name, &selected_easing)
+				| size(HEIGHT, LESS_THAN, 10)
+				| CatchEvent([this](Event e) {
+				if (e.is_mouse() && e.mouse().motion == Mouse::Pressed) {
+					ScreenInteractive::Active()->Post([this] {
+						brd->option.move_func = easing_func[selected_easing];
+						});
+				}
+				return false;
+					});
 			return
 				Container::Vertical
 				({
 					Container::Horizontal
 					({
 						Text("Animation Style: ") | borderEmpty,
-						drop | size(HEIGHT,LESS_THAN,10)
-					}),
-					Ele(separatorEmpty()),
-					confirm
+						drop 
+					}) | bgcolor(0xeee4da_rgb) | color(0x776e65_rgb)
 				});
+		}
+
+		ftxui::Component AutomaticMove() {
+			using namespace ftxui;
+			return Button("Automatic Play Switch", [this] {
+				if (!board.is_over()) {
+					brd->automatic_move = !brd->automatic_move;
+					brd->TakeFocus();
+					ScreenInteractive::Active()->PostEvent(Event::Special("automatic_move"));
+				}
+				else
+				{
+					brd->automatic_move = false;
+				}
+				}, ButtonOption::Animated(0xeee4da_rgb, 0x776e65_rgb));
 		}
 
 		std::vector<std::string> easing_name;
 		std::vector<ftxui::animation::easing::Function> easing_func;
+		std::function<void()> reset_handler;
 		int selected_easing = 1;
 		BoardCom brd;
 		core::board_2048 board;
 		std::string board_size = "4";
+		std::string cell_size = "5";
+		std::string search_depth = "-3";
 		std::string animation_duration = "125";
 		int duration_ms = 125;
 		int best_score = 0;

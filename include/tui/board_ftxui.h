@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include"board_2048.hpp"
+#include"solver.hpp"
 #include<format>
 #include<ftxui/screen/color.hpp>
 #include<ftxui/dom/elements.hpp>
@@ -26,7 +27,7 @@ namespace tui {
 			default:
 				srand(tile_number);
 				int baseRed = 255;
-				int baseGreen = 255;
+				int baseGreen = 180;
 				int baseBlue = 0;
 
 				double factor1 = std::log2(tile_number * rand() / RAND_MAX) / std::log2(2048);
@@ -76,7 +77,7 @@ namespace tui {
 			rows.push_back(hbox(row));
 			if (x != brd.size() - 1) {
 				rows.push_back(
-					ftxui::text(sep) | bgcolor(bgcol) | size(WIDTH, EQUAL, sep.size())
+					ftxui::text(sep) | bgcolor(bgcol) | size(WIDTH, EQUAL, int(sep.size()))
 				);
 			}
 		}
@@ -290,18 +291,18 @@ namespace tui {
 				}
 			}
 			int dir = -1;
-			if (e == Event::ArrowUp || e == Event::W) {
+			if (e == Event::ArrowUp || e == Event::w) {
 				dir = core::direction::up;
 			}
-			else if (e == Event::ArrowDown || e == Event::S)
+			else if (e == Event::ArrowDown || e == Event::s)
 			{
 				dir = core::direction::down;
 			}
-			else if (e == Event::ArrowLeft || e == Event::A)
+			else if (e == Event::ArrowLeft || e == Event::a)
 			{
 				dir = core::direction::left;
 			}
-			else if (e == Event::ArrowRight || e == Event::D)
+			else if (e == Event::ArrowRight || e == Event::d)
 			{
 				dir = core::direction::right;
 			}
@@ -311,17 +312,28 @@ namespace tui {
 				animate_value_and_target.resize(option.board_size);
 				return true;
 			}
+			else if (e == Event::Special("automatic_move")) {
+				if (automatic_move) {
+					dir = solver.get_best_move(board);
+				}
+				else {
+					return true;
+				}
+			}
 
 			if (dir != -1) {
-				if (animation_progress == 1.0f && board.valid_move(dir)) {
-					animation_progress = 0.0f;
-					pre_board = board;
-					board.move_record(dir);
-					animate_direction = dir;
-					UpdateAnimationTarget(animate_direction);
-					board.add_random_tile();
+				if (animation_progress == 1.0f) {
+					if (board.valid_move(dir)) {
+						animation_progress = 0.0f;
+						pre_board = board;
+						board.move_record(dir);
+						animate_direction = dir;
+						UpdateAnimationTarget(animate_direction);
+						board.add_random_tile();
+					}
 					if (board.is_over()) {
 						ScreenInteractive::Active()->PostEvent(Event::Special("gameover"));
+						automatic_move = false;
 					}
 				}
 				return true;
@@ -336,6 +348,9 @@ namespace tui {
 			Element ret;
 			if (animation_progress == 1.0f) {
 				ret = board_view_2048(board, option.cell_size);
+				if (automatic_move) {
+					ScreenInteractive::Active()->PostEvent(Event::Special("automatic_move"));
+				}
 			}
 			else {
 				if (animate_direction % 2 == 0) {
@@ -422,6 +437,8 @@ namespace tui {
 			}
 		}
 		BoardOption option;
+		bool automatic_move = false;
+		core::solver solver;
 	private:
 		ftxui::Box box_;
 		core::board_2048& board;

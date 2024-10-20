@@ -8,35 +8,70 @@ namespace tui {
     class BoardBase;
 }
 namespace core {
-
+    struct solver;
+    inline std::default_random_engine gen(std::random_device{}());
 class board_2048 {
 public:
     friend class tui::BoardBase;
+    friend struct solver;
     using iter_type = std::vector<int>::iterator;
     board_2048(int size = 4)
         : brd_size(size)
-        , gen(std::random_device {}())
     {
         brd.resize(size * size, 0);
         add_random_tile();
-        add_random_tile();
+        if (size * size >= 2) {
+            add_random_tile();
+        }
     }
 
     void move(int dir);
 
     void move_record(int dir);
 
-    bool valid_move(int dir);
+    bool valid_move(int dir) const;
 
     void add_random_tile();
 
     int get_tile(int x, int y) const { return brd[x * brd_size + y]; }
 
+    void set_tile(int x, int y, int val) { brd[x * brd_size + y] = val; }
+
+    int count_tiles() const {
+        int cnt = 0;
+        for (auto& n : brd) {
+            if (n) {
+                ++cnt;
+            }
+        }
+        return cnt;
+    }
+
+    int count_empty_tiles() const {
+        int cnt = 0;
+        for (auto& n : brd) {
+            if (!n) {
+                ++cnt;
+            }
+        }
+        return cnt;
+    }
+
+    int count_distinct_tiles() const {
+        uint64_t mask = 0;
+        for (auto& tile : brd) {
+            if (tile != 0) {
+                mask |= 1ull << int(std::log2(tile));
+            }
+        }
+        return std::popcount(mask);
+    }
+
     int size() const {
         return brd_size;
     }
 
-    bool is_over() { 
+    bool is_over() const { 
         if (
             valid_move(direction::left)||
             valid_move(direction::down)||
@@ -50,11 +85,22 @@ public:
         }
     }
 
+    uint64_t hash() const {
+        uint64_t hash_value = 0;
+        for (int i = 0; i < brd.size(); ++i) {
+            hash_value = hash_value * 31 + brd[i];
+        }
+        return hash_value;
+    }
+
+
+    bool operator==(const board_2048& brd) const {
+        return this->brd == brd.brd;
+    }
+
     uint64_t get_score() const { return score;}
 private:
-    std::default_random_engine gen;
     int brd_size = 4;
-    bool over = false;
     uint64_t score = 0;
     std::vector<int> brd;
     std::vector<std::pair<int, int>> records;
@@ -97,7 +143,7 @@ void board_2048::add_random_tile()
     do {
         index = dist(gen);
     } while (brd[index] != 0);
-    brd[index] = (dist(gen) % 2 + 1) * 2;
+    brd[index] = dist(gen) % 10 == 0 ? 4 : 2;
 }
 
 inline void board_2048::slide_row(iter_type begin, iter_type end)
@@ -293,28 +339,33 @@ inline void board_2048::move_record(int dir)
     rotate_from_left_to(dir);
 }
 
-inline bool board_2048::valid_move(int dir)
+inline bool board_2048::valid_move(int dir) const 
 {
-    std::vector<int> original_brd = brd;
+    board_2048 test_brd = *this;
+    std::vector<int> original_brd = test_brd.brd;
 
-    rotate_to_left_from(dir);
+    test_brd.rotate_to_left_from(dir);
 
     // Move left
     for (int i = 0; i < brd_size; ++i) {
-        slide_and_merge_row(brd.begin() + i * brd_size, brd.begin() + (i + 1) * brd_size);
+        test_brd.slide_and_merge_row(test_brd.brd.begin() + i * brd_size, test_brd.brd.begin() + (i + 1) * test_brd.brd_size);
     }
 
-    rotate_from_left_to(dir);
+    test_brd.rotate_from_left_to(dir);
 
-    // Add a new random tile
     bool ret = false;
-    if (brd != original_brd) {
+    if (test_brd.brd != original_brd) {
         ret = true;
     }
     else {
         ret = false;
     }
-    brd = original_brd;
     return ret;
 }
 }
+template<>
+struct std::hash<core::board_2048> {
+    uint64_t operator()(const core::board_2048& brd) const {
+        return brd.hash();
+    }
+};
