@@ -60,9 +60,7 @@ public:
     int count_distinct_tiles() const {
         uint64_t mask = 0;
         for (auto& tile : brd) {
-            if (tile != 0) {
-                mask |= 1ull << int(std::log2(tile));
-            }
+            mask |= tile;
         }
         return std::popcount(mask);
     }

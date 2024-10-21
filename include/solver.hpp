@@ -79,13 +79,13 @@ namespace core {
         const int pick_move(const board_2048 board) {
             const int depth_to_use = depth <= 0 ? pick_depth(board) - depth : depth;
 
-            const int move = helper(board, depth_to_use, 0) & 3;
+            const int move = expectimax(board, depth_to_use, 0) & 3;
             update_cache_pointers();
             return move;
         }
 
     private:
-        const eval_t helper(const board_2048& board, const int cur_depth, const int fours) {
+        const eval_t expectimax(const board_2048& board, const int cur_depth, const int fours) {
             if (board.is_over()) {
                 const eval_t score = MULT * evaluate_board(board);
                 return (score - (score >> 2)) << 2;  // subtract score / 4 as penalty for dying, then pack
@@ -117,9 +117,9 @@ namespace core {
                     for (auto& tile : new_board.brd) {
                         if (!tile) {
                             tile = 2;
-                            expected_score += 9 * (helper(new_board, cur_depth - 1, fours) >> 2);
+                            expected_score += 9 * (expectimax(new_board, cur_depth - 1, fours) >> 2);
                             tile = 4;
-                            expected_score += 1 * (helper(new_board, cur_depth - 1, fours + 1) >> 2);
+                            expected_score += 1 * (expectimax(new_board, cur_depth - 1, fours + 1) >> 2);
                             tile = 0;
                             ++cnt_empty;
                         }
