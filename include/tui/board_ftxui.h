@@ -414,7 +414,7 @@ public:
         int col_size = (option.cell_size + option.sep_size) * option.board_size - option.sep_size;
         return ret
             | size(WIDTH, EQUAL, col_size * 2 + 2)
-            | size(HEIGHT, EQUAL, col_size + 2) | reflect(box_);
+            | size(HEIGHT, EQUAL, col_size) | reflect(box_);
     }
 
     int op_dir(int dir) const { return (dir + 2) & 0b11; }

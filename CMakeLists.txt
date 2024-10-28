@@ -20,8 +20,8 @@ include_directories(include)
 
 aux_source_directory(src DIR_SRCS)
 
-add_executable(main ${DIR_SRCS})
-target_link_libraries(main
+add_executable(2048-tui ${DIR_SRCS})
+target_link_libraries(2048-tui
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
   PRIVATE ftxui::component

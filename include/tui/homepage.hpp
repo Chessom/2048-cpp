@@ -6,7 +6,7 @@ namespace tui {
 	struct HomePage {
 		HomePage() {
 			using namespace ftxui;
-			reset_handler= [this] {
+			reset_handler = [this] {
 				try {
 					brd->option.board_size = std::stoi(board_size);
 					brd->option.cell_size = std::max(1, std::stoi(cell_size));
@@ -38,7 +38,7 @@ namespace tui {
 								BestScoreRecord("Best"),
 								Renderer([] {return separatorEmpty(); }),
 								ResetButton(),
-							}) | hcenter,
+							}),
 							Ele(separatorEmpty()),
 							Container::Horizontal({
 								BoardSizeInput() | borderEmpty | bgcolor(colors::zero_col) | color(colors::num_col),
@@ -63,10 +63,10 @@ namespace tui {
 									Color::Red,colors::num_col)
 							) | hcenter
 						}),
-				}
-			) 
-			| Modal(ModalDialog("Over!"), &show_modal)
-			| CatchEvent([this](Event e) {
+					}
+				)
+				| Modal(ModalDialog("Over!"), &show_modal)
+				| CatchEvent([this](Event e) {
 				if (e == Event::Special("gameover")) {
 					show_modal = true;
 					score = board.get_score();
@@ -76,7 +76,7 @@ namespace tui {
 					return true;
 				}
 				return false;
-			});
+					});
 			screen.Loop(layout | center);
 		}
 
@@ -90,7 +90,7 @@ namespace tui {
 				}) | borderRounded | bgcolor(0x877d74_rgb);
 		}
 
-		ftxui::Component Ele(ftxui::Element e) const  {
+		ftxui::Component Ele(ftxui::Element e) const {
 			return ftxui::Renderer([e] {return e; });
 		}
 
@@ -113,8 +113,9 @@ namespace tui {
 							text(std::to_string(board.get_score())) | color(Color::White) | center
 						)
 						| bgcolor(colors::sep_col)
-						| size(WIDTH, EQUAL, 11)
-						| size(HEIGHT, LESS_THAN, 6);
+						| size(WIDTH, GREATER_THAN, 11)
+						| size(HEIGHT, LESS_THAN, 6)
+						| flex_grow;
 				}
 			);
 		}
@@ -129,8 +130,9 @@ namespace tui {
 							text(std::to_string(best_score)) | color(Color::White) | center
 						)
 						| bgcolor(colors::sep_col)
-						| size(WIDTH, EQUAL, 11)
-						| size(HEIGHT, LESS_THAN, 6);
+						| size(WIDTH, GREATER_THAN, 11)
+						| size(HEIGHT, LESS_THAN, 6)
+						| flex_grow;
 				}
 			);
 		}
@@ -146,7 +148,7 @@ namespace tui {
 			input |= CatchEvent([&](Event event) {
 				return event.is_character() && !std::isdigit(event.character()[0]);
 				});
-			return Container::Horizontal({ Text("Board size:  ") | vcenter,input | vcenter});
+			return Container::Horizontal({ Text("Board size:  ") | vcenter,input | vcenter });
 		}
 
 		ftxui::Component CellSizeInput() {
@@ -182,7 +184,7 @@ namespace tui {
 				catch (const std::exception&) {
 					brd->solver.set_depth(-3);
 				}
-			};
+				};
 			option.multiline = false;
 			Component input = Input(&search_depth, "Depth", option)
 				| size(WIDTH, GREATER_THAN, 4);
@@ -203,7 +205,7 @@ namespace tui {
 					duration_ms = 0;
 				}
 				brd->option.duration = std::chrono::milliseconds(duration_ms);
-			};
+				};
 			option.multiline = false;
 			Component input = Input(&animation_duration, "duration(ms)", option);
 			// Filter out non-digit characters.
@@ -220,16 +222,16 @@ namespace tui {
 					}
 				}
 				return false;
-			});
+					});
 
 			return
-				Container::Vertical({ 
+				Container::Vertical({
 					Container::Horizontal({
 						Text("Animation duration(ms):") | vcenter,
 						input | vcenter,
 					}) ,
 					slider | vcenter
-				});
+					});
 		}
 
 		ftxui::Component AnimationEasingAdjust() {
@@ -277,9 +279,9 @@ namespace tui {
 					Container::Horizontal
 					({
 						Text("Animation Style: ") | borderEmpty,
-						drop 
+						drop
 					}) | bgcolor(0xeee4da_rgb) | color(0x776e65_rgb)
-				});
+					});
 		}
 
 		ftxui::Component AutomaticMove() {
