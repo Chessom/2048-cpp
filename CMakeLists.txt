@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.30.2)
+cmake_minimum_required (VERSION 3.20.0)
  
 project (2048-cpp)
 
@@ -17,9 +17,6 @@ FetchContent_Declare(ftxui
 FetchContent_MakeAvailable(ftxui)
 
 include_directories(include)
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/third-party/ftxui/include
-)
 
 aux_source_directory(src DIR_SRCS)
 
