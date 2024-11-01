@@ -26,3 +26,13 @@ target_link_libraries(2048-tui
   PRIVATE ftxui::dom
   PRIVATE ftxui::component
 )
+
+if (EMSCRIPTEN)
+  string(APPEND CMAKE_CXX_FLAGS " -s USE_PTHREADS")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -s ASYNCIFY")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -s PROXY_TO_PTHREAD")
+
+  foreach(file "index.html" "run_webassembly.py")
+    configure_file("src/${file}" ${file})
+  endforeach(file)
+endif()
