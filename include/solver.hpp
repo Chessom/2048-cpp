@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include <limits>
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
@@ -18,7 +17,7 @@ namespace core {
         static constexpr eval_t MULT = 9e18 / (MAX_EVAL * 10 * 4 * 30 * 4 * 16);
         static constexpr int MAX_CACHE = 1 << 20;
 
-        solver(int depth = 2)
+        explicit solver(int depth = 2)
             : depth(depth){
             init_cache();
         }
@@ -42,7 +41,7 @@ namespace core {
             cache.reserve(USUAL_CACHE);
         }
 
-        void add_to_cache(const board_2048 board, const eval_t score, const int move, const int depth) {
+        void add_to_cache(const board_2048& board, const eval_t score, const int move, const int depth) {
             cache[board] = (((score << 2) | move) << 4) | depth;
 
             // relies on MAX_CACHE being a power of 2
@@ -76,7 +75,7 @@ namespace core {
             q[3] = q_end;
         }
 
-        const int pick_move(const board_2048 board) {
+        int pick_move(const board_2048& board) {
             const int depth_to_use = depth <= 0 ? pick_depth(board) - depth : depth;
 
             const int move = expectimax(board, depth_to_use, 0) & 3;
@@ -85,7 +84,7 @@ namespace core {
         }
 
     private:
-        const eval_t expectimax(const board_2048& board, const int cur_depth, const int fours) {
+        eval_t expectimax(const board_2048& board, const int cur_depth, const int fours) {
             if (board.is_over()) {
                 const eval_t score = MULT * evaluate_board(board);
                 return (score - (score >> 2)) << 2;  // subtract score / 4 as penalty for dying, then pack
@@ -95,7 +94,7 @@ namespace core {
             }
 
             if (cur_depth >= CACHE_DEPTH) {
-                const cache_t::iterator it = cache.find(board);
+                const auto it = cache.find(board);
 #ifdef REQUIRE_DETERMINISTIC
                 if (it != cache.end() && (it->second & 0xF) == cur_depth) return it->second >> 4;
 #else
@@ -140,7 +139,7 @@ namespace core {
             return (best_score << 2) | best_move;  // pack both score and move
         }
 
-        const int pick_depth(const board_2048 board) {
+        int pick_depth(const board_2048& board) {
             const int tile_ct = board.count_tiles();
             const int score = board.count_distinct_tiles() + (tile_ct <= 6 ? 0 : (tile_ct - 6) >> 1);
             return 2 + (score >= 8) + (score >= 11) + (score >= 14) + (score >= 15) + (score >= 17) + (score >= 19);
@@ -150,7 +149,7 @@ namespace core {
             int size = board.size();
             auto calculate_corner_value = [&](int start_x, int start_y, int dx, int dy) {
                 eval_t value = 0;
-                int init_weight = 20, weight = init_weight;
+                int init_weight = 20, weight = 20;
                 for (int i = 0; i < size; ++i) {
                     weight = init_weight;
                     for (int j = 0; j < size - i; ++j) {

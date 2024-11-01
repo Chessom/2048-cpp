@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "board_2048.hpp"
 #include "solver.hpp"
+#include <future>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>

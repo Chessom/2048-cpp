@@ -1,6 +1,5 @@
 #pragma once
-#include <random>
-#include <vector>
+#include<utility>
 namespace core {
 namespace direction {
     enum {
@@ -26,16 +25,18 @@ struct coord_t {
     {
         switch (dir) {
         case direction::up:
-            y--;
+            --y;
             break;
         case direction::down:
-            y++;
+            ++y;
             break;
         case direction::left:
-            x--;
+            --x;
             break;
         case direction::right:
-            x++;
+            ++x;
+            break;
+        default:
             break;
         }
     }
