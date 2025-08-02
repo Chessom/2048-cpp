@@ -365,7 +365,7 @@ public:
         }
     }
 
-    ftxui::Element Render() override
+    ftxui::Element OnRender() override
     {
         using namespace ftxui;
         Element ret;
